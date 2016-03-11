@@ -72,7 +72,7 @@ $ go tool cover -html coverage.out
 [jasper]: https://textiles.ncsu.edu/blog/team/warren-jasper/
 [libusb]: https://github.com/gotmc/libusb
 [libusb-c]: http://libusb.info
-[LICENSE.txt]: https://github.com/gotmc/mccdaq/blob/master/LICENSE.txt
+[LICENSE.txt]: https://github.com/questrail/usb1608fsplus/blob/master/LICENSE.txt
 [license image]: https://img.shields.io/badge/license-MIT-blue.svg
 [mcc]: http://www.mccdaq.com
 [mccdaq]: https://github.com/gotmc/mccdaq
@@ -80,3 +80,4 @@ $ go tool cover -html coverage.out
 [pull request]: https://help.github.com/articles/using-pull-requests
 [Scott Chacon]: http://scottchacon.com/about.html
 [usb-1608fs-plus]: http://www.mccdaq.com/usb-data-acquisition/USB-1608FS-Plus.aspx
+[usb1608fsplus]: https://github.com/questrail/usb1608fsplus
