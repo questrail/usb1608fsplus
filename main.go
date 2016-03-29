@@ -22,7 +22,7 @@ func main() {
 	defer ctx.Exit()
 
 	// Create the USB-1608FS-Plus DAQ device
-	daq, err := usb1608fsplus.GetFromSN(ctx, "01ACD31D")
+	daq, err := usb1608fsplus.NewViaSN(ctx, "01ACD31D")
 	if err != nil {
 		log.Fatalf("Something bad getting S/N happened: %s", err)
 	}
@@ -57,7 +57,7 @@ func main() {
 	log.Printf("Intercept = %v\n", gainTable.Intercept)
 
 	// Read one analog reading.
-	daq.StopAnalogScan()
+	daq.AnalogInput.StopScan()
 	time.Sleep(time.Second)
 	foo, err := daq.ReadAnalogInput(1, 0)
 	if err != nil {
@@ -82,18 +82,18 @@ func main() {
 	numChannels := 1
 
 	// Stop, clear, and configure
-	daq.StopAnalogScan()
+	daq.AnalogInput.StopScan()
 	time.Sleep(time.Second)
 	daq.ClearScanBuffer()
-	daq.ConfigAnalogScan(ranges)
+	daq.AnalogInput.SetScanRanges(ranges)
 	time.Sleep(2 * time.Second)
-	blah, err := daq.ReadScanRanges()
+	blah, err := daq.AnalogInput.ScanRanges()
 	log.Printf("Ranges = %v\n", blah)
 
 	// Start the scan
-	daq.StartAnalogScan(count, frequency, channels, options)
+	daq.AnalogInput.StartScan(count)
 	time.Sleep(1 * time.Second)
-	data, err := daq.ReadScan(count, numChannels, options)
+	data, err := daq.AnalogInput.ReadScan(count, numChannels, options)
 	for i := 0; i < 8; i += 2 {
 		log.Printf("data[%d:%d] = %d %d\n", i, i+1, data[i+1], data[i])
 	}
@@ -101,7 +101,7 @@ func main() {
 		log.Printf("data[%d:%d] = %d %d\n", i, i+1, data[i+1], data[i])
 	}
 	log.Printf("data is %d bytes\n", len(data))
-	daq.StopAnalogScan()
+	daq.AnalogInput.StopScan()
 	time.Sleep(1 * time.Second)
 
 	daq.Close()
