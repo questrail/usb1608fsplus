@@ -57,7 +57,7 @@ func main() {
 	termWidth := 40
 
 	// Setup list of info
-	var infoStrings = make([]string, 3)
+	var infoStrings = make([]string, 4)
 	serialNumber, err := daq.SerialNumber()
 	if err != nil {
 		serialNumber = "Unknown"
@@ -145,9 +145,11 @@ func main() {
 				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
 					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
 			} else {
-				strs[i] = fmt.Sprintf("%6s = %.5f Vraw\n", ai.Channels[i].Description, raw)
+				strs[i] = fmt.Sprintf("%6s = %.5f Vraw @ %srange\n", ai.Channels[i].Description, raw,
+					ai.Channels[i].Range)
 			}
 		}
+		infoStrings[3] = fmt.Sprintf("Bytes read = %d\n", totalBytesRead)
 		termui.Render(infoList, ls, par0)
 	}
 
