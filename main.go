@@ -8,10 +8,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"time"
 
+	"github.com/gizak/termui"
 	"github.com/gotmc/libusb"
 	"github.com/gotmc/mccdaq/usb1608fsplus"
 )
@@ -19,6 +21,8 @@ import (
 const millisecondDelay = 100
 
 func main() {
+
+	// Initialize the USB Context
 	ctx, err := libusb.Init()
 	if err != nil {
 		log.Fatal("Couldn't create USB context. Ending now.")
@@ -32,26 +36,64 @@ func main() {
 		log.Fatalf("Couldn't find a USB-1608FS-Plus: %s", err)
 	}
 
-	// Print some info about the device
-	log.Printf("Vendor ID = 0x%x / Product ID = 0x%x\n", daq.DeviceDescriptor.VendorID,
-		daq.DeviceDescriptor.ProductID)
-	serialNumber, err := daq.SerialNumber()
-	log.Printf("Serial number via control transfer = %s", serialNumber)
-
 	// Read the calibration memory to setup the gain table
-	gainTable, _ := daq.BuildGainTable()
-	log.Printf("Slope = %v\n", gainTable.Slope)
-	log.Printf("Intercept = %v\n", gainTable.Intercept)
-
-	/**************************
-	* Start the Analog Scan   *
-	**************************/
+	// gainTable, _ := daq.BuildGainTable()
 
 	// Create new analog input and ensure the scan is stopped and buffer cleared
 	ai := daq.NewAnalogInput()
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.ClearScanBuffer()
+
+	// Initialize the terminal UI
+	err = termui.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termui.Close()
+
+	//termui.UseTheme("helloworld")
+
+	termWidth := 40
+
+	// Setup list of info
+	var infoStrings = make([]string, 3)
+	serialNumber, err := daq.SerialNumber()
+	if err != nil {
+		serialNumber = "Unknown"
+	}
+	infoStrings[0] = fmt.Sprintf("S/N %s", serialNumber)
+	infoList := termui.NewList()
+	infoList.Items = infoStrings
+	infoList.ItemFgColor = termui.ColorYellow
+	infoList.BorderLabel = "USB-1608FS-Plus Info"
+	infoList.Height = len(infoStrings) + 2
+	infoList.Width = termWidth
+	infoList.Y = 0
+
+	var strs = make([]string, 6)
+
+	ls := termui.NewList()
+	ls.Items = strs
+	ls.ItemFgColor = termui.ColorYellow
+	ls.BorderLabel = "Analog Inputs"
+	ls.Height = len(strs) + 2
+	ls.Width = termWidth
+	ls.Y = infoList.Y + infoList.Height
+
+	par0 := termui.NewPar("Press q to quit")
+	par0.Height = 1
+	par0.Width = termWidth
+	par0.Y = ls.Y + ls.Height
+	par0.Border = false
+
+	termui.Handle("/sys/kbd/q", func(termui.Event) {
+		termui.StopLoop()
+	})
+
+	/**************************
+	* Start the Analog Scan   *
+	**************************/
 
 	// Setup the analog input scan
 	configData, err := ioutil.ReadFile("./analog_config.json")
@@ -60,29 +102,29 @@ func main() {
 	}
 	dec := json.NewDecoder(bytes.NewReader(configData))
 	var configJSON = struct {
+		ScansPerBuffer             int `json:"scans_per_buffer"`
+		TotalBuffers               int `json:"total_buffers"`
 		*usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
+		0,
+		0,
 		ai,
 	}
 	if err := dec.Decode(&configJSON); err != nil {
 		log.Fatalf("parse USB-1608FS-Plus: %v", err)
 	}
+	scansPerBuffer := configJSON.ScansPerBuffer
+	totalBuffers := configJSON.TotalBuffers
 	ai.SetScanRanges()
-	log.Printf("Frequency = %f Hz", ai.Frequency)
+	infoStrings[1] = fmt.Sprintf("Scans/buffer = %d", scansPerBuffer)
+	infoStrings[2] = fmt.Sprintf("Total buffers = %d", totalBuffers)
 
 	// Read the scan ranges
 	time.Sleep(millisecondDelay * time.Millisecond)
-	scanRanges, err := ai.ScanRanges()
-	log.Printf("Ranges = %v\n", scanRanges)
+	_, err = ai.ScanRanges()
 
 	// Read the totalScans using splitScansIn number of scans
-	const (
-		scansPerBuffer = 256
-		totalBuffers   = 10
-	)
-	expectedDuration := (scansPerBuffer * totalBuffers) / ai.Frequency
 	ai.StartScan(0)
-	start := time.Now()
 	totalBytesRead := 0
 	for j := 0; j < totalBuffers; j++ {
 		// time.Sleep(millisecondDelay * time.Millisecond)
@@ -100,19 +142,19 @@ func main() {
 		for i := 0; i < wordsToShow; i++ {
 			raw, err := usb1608fsplus.Volts(data[i*2:i*2+2], ai.Channels[i].Range)
 			if err != nil {
-				log.Printf("%s = 0x%02x%02x (Error: %s)\n", ai.Channels[i].Description, data[i*2+1], data[i*2], err)
+				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
+					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
 			} else {
-				log.Printf("%s = %.5f Vraw\n", ai.Channels[i].Description, raw)
+				strs[i] = fmt.Sprintf("%6s = %.5f Vraw\n", ai.Channels[i].Description, raw)
 			}
 		}
+		termui.Render(infoList, ls, par0)
 	}
-	elapsed := time.Since(start)
-	log.Printf("Reading %d bytes took %.2f s", totalBytesRead, elapsed.Seconds())
-	log.Printf("Anticipated reading %d bytes to take %.2f s",
-		scansPerBuffer*totalBuffers*ai.NumEnabledChannels()*2, expectedDuration)
+
 	// Stop the analog scan and close the DAQ
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
 	daq.Close()
+	termui.Loop()
 }
