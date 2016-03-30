@@ -1,12 +1,14 @@
 {
+  "scans_per_buffer": 256,
+  "total_buffers": 50,
   "output_file": "output_data.dat",
   "analog_input": {
     "freq": 10000,
     "block_transfer": true,
     "trigger": "none",
-    "ext_pacer": true,
+    "ext_pacer": false,
     "output_sync": false,
-    "debug_mode": false,
+    "debug_mode": true,
     "stall_overrun": true,
     "channels": [
       {"enabled": true, "range": "10V", "desc": "I1"},
