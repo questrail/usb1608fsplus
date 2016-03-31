@@ -1,5 +1,5 @@
 {
-  "scans_per_buffer": 512,
+  "scans_per_buffer": 1024,
   "total_buffers": 100,
   "output_file": "output_data.dat",
   "analog_input": {
