@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,7 +19,10 @@ import (
 	"github.com/gotmc/mccdaq/usb1608fsplus"
 )
 
-const millisecondDelay = 100
+const (
+	millisecondDelay = 100
+	termWidth        = 70
+)
 
 func main() {
 
@@ -35,12 +39,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't find a USB-1608FS-Plus: %s", err)
 	}
+	defer daq.Close()
 
 	// Read the calibration memory to setup the gain table
 	// gainTable, _ := daq.BuildGainTable()
 
 	// Create new analog input and ensure the scan is stopped and buffer cleared
-	ai := daq.NewAnalogInput()
+	ai, err := daq.NewAnalogInput()
+	if err != nil {
+		log.Fatalf("Error creating new analog input: %s", err)
+	}
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.ClearScanBuffer()
@@ -54,10 +62,8 @@ func main() {
 
 	//termui.UseTheme("helloworld")
 
-	termWidth := 40
-
 	// Setup list of info
-	var infoStrings = make([]string, 4)
+	var infoStrings = make([]string, 5)
 	serialNumber, err := daq.SerialNumber()
 	if err != nil {
 		serialNumber = "Unknown"
@@ -141,14 +147,20 @@ func main() {
 		wordsToShow := 6
 		for i := 0; i < wordsToShow; i++ {
 			raw, err := usb1608fsplus.Volts(data[i*2:i*2+2], ai.Channels[i].Range)
+			slope := ai.GainTable.Slope[int(ai.Channels[i].Range)][i]
+			intercept := ai.GainTable.Intercept[int(ai.Channels[i].Range)][i]
+			binaryNum := int(binary.LittleEndian.Uint16(data[i*2 : i*2+2]))
+			binaryAdjusted := int(float64(binaryNum)*slope - intercept)
+
 			if err != nil {
 				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
 					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
 			} else {
-				strs[i] = fmt.Sprintf("%6s = %.5f Vraw @ %srange\n", ai.Channels[i].Description, raw,
-					ai.Channels[i].Range)
+				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f Vraw](fg-white) / [%#x Vadj](fg-green) @ %srange\n",
+					ai.Channels[i].Description, raw, binaryAdjusted, ai.Channels[i].Range)
 			}
 		}
+		infoStrings[4] = fmt.Sprintf("Frequency = %f Hz", ai.Frequency)
 		infoStrings[3] = fmt.Sprintf("Bytes read = %d\n", totalBytesRead)
 		termui.Render(infoList, ls, par0)
 	}
@@ -157,6 +169,5 @@ func main() {
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
-	daq.Close()
 	termui.Loop()
 }
