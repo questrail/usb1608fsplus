@@ -24,4 +24,4 @@ local: generate
 
 #  Compile the project to run on the targeted ARM processor
 arm: generate
-	CC_FOR_TARGET=/usr/local/bin/arm-none-eabi-gcc GOARCH=arm GOOS=linux GOARM=7 CGO_ENABLED=1 go build -o usb1608fsplus_arm -ldflags="-extld=$CC"
+	env CC="/usr/local/bin/arm-none-eabi-gcc" GOARCH=arm GOARM=7 CGO_ENABLED=1 go build -ldflags='-extld=$CC'
