@@ -151,8 +151,8 @@ func main() {
 				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
 					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
 			} else {
-				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) @ %srange\n",
-					ai.Channels[i].Description, volts, ai.Channels[i].Range)
+				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) (0x%02x%02x) @ %srange\n",
+					ai.Channels[i].Description, volts, data[i*2+1], data[i*2], ai.Channels[i].Range)
 			}
 		}
 		infoStrings[4] = fmt.Sprintf("Frequency = %f Hz", ai.Frequency)
