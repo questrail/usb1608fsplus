@@ -7,6 +7,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -147,12 +148,13 @@ func main() {
 		for i := 0; i < wordsToShow; i++ {
 			desiredByte := i * 2
 			volts, err := ai.Channels[i].Volts(data[desiredByte : desiredByte+2])
+			encodedValue := int(binary.LittleEndian.Uint16(data))
 			if err != nil {
-				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
-					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
+				strs[i] = fmt.Sprintf("%5s = %d (Error: %s)\n",
+					ai.Channels[i].Description, encodedValue, err)
 			} else {
-				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) (0x%02x%02x) @ %srange\n",
-					ai.Channels[i].Description, volts, data[i*2+1], data[i*2], ai.Channels[i].Range)
+				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) (%d) @ %srange\n",
+					ai.Channels[i].Description, volts, encodedValue, ai.Channels[i].Range)
 			}
 		}
 		infoStrings[4] = fmt.Sprintf("Frequency = %f Hz", ai.Frequency)
