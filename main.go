@@ -7,7 +7,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -146,19 +145,14 @@ func main() {
 		// Show the first value measured for each channel
 		wordsToShow := 6
 		for i := 0; i < wordsToShow; i++ {
-			raw, err := usb1608fsplus.VoltsData(data[i*2:i*2+2], ai.Channels[i].Range)
-			slope := ai.GainTable.Slope[int(ai.Channels[i].Range)][i]
-			intercept := ai.GainTable.Intercept[int(ai.Channels[i].Range)][i]
-			binaryNum := int(binary.LittleEndian.Uint16(data[i*2 : i*2+2]))
-			binaryAdjusted := int(float64(binaryNum)*slope - intercept)
-			adj := usb1608fsplus.Volts(binaryAdjusted, ai.Channels[i].Range)
-
+			desiredByte := i * 2
+			volts, err := ai.Channels[i].Volts(data[desiredByte : desiredByte+2])
 			if err != nil {
 				strs[i] = fmt.Sprintf("%5s = 0x%02x%02x (Error: %s)\n",
 					ai.Channels[i].Description, data[i*2+1], data[i*2], err)
 			} else {
-				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f Vraw](fg-white) / [%.5f Vadj](fg-green) @ %srange\n",
-					ai.Channels[i].Description, raw, adj, ai.Channels[i].Range)
+				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) @ %srange\n",
+					ai.Channels[i].Description, volts, ai.Channels[i].Range)
 			}
 		}
 		infoStrings[4] = fmt.Sprintf("Frequency = %f Hz", ai.Frequency)
