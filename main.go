@@ -148,7 +148,7 @@ func main() {
 		for i := 0; i < wordsToShow; i++ {
 			desiredByte := i * 2
 			volts, err := ai.Channels[i].Volts(data[desiredByte : desiredByte+2])
-			encodedValue := int(binary.LittleEndian.Uint16(data))
+			encodedValue := int(binary.LittleEndian.Uint16(data[desiredByte : desiredByte+2]))
 			if err != nil {
 				strs[i] = fmt.Sprintf("%5s = %d (Error: %s)\n",
 					ai.Channels[i].Description, encodedValue, err)
