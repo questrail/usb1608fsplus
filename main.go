@@ -147,14 +147,15 @@ func main() {
 		wordsToShow := 6
 		for i := 0; i < wordsToShow; i++ {
 			desiredByte := i * 2
-			volts, err := ai.Channels[i].Volts(data[desiredByte : desiredByte+2])
+			ch := ai.Channels[i]
+			volts, err := ch.Volts(data[desiredByte : desiredByte+2])
 			encodedValue := int(binary.LittleEndian.Uint16(data[desiredByte : desiredByte+2]))
 			if err != nil {
 				strs[i] = fmt.Sprintf("%5s = %d (Error: %s)\n",
-					ai.Channels[i].Description, encodedValue, err)
+					ch.Description, encodedValue, err)
 			} else {
-				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) (%d) @ %srange\n",
-					ai.Channels[i].Description, volts, encodedValue, ai.Channels[i].Range)
+				strs[i] = fmt.Sprintf("[%6s](fg-red) = [%.5f V](fg-white) (%d / %#x) @ %srange\n",
+					ch.Description, volts, encodedValue, encodedValue, ch.Range)
 			}
 		}
 		infoStrings[4] = fmt.Sprintf("Frequency = %f Hz", ai.Frequency)
