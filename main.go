@@ -12,11 +12,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/gizak/termui"
 	"github.com/gotmc/libusb"
 	"github.com/gotmc/mccdaq/usb1608fsplus"
+	"github.com/nathan-osman/go-rpigpio"
 )
 
 const (
@@ -25,6 +27,16 @@ const (
 )
 
 func main() {
+
+	// If running from RPi, set GPIO3 low.
+	if runtime.GOARCH == "arm" {
+		gpio3, err := rpi.OpenPin(3, rpi.OUT)
+		if err != nil {
+			panic(err)
+		}
+		defer gpio3.Close()
+		gpio3.Write(rpi.LOW)
+	}
 
 	// Initialize the USB Context
 	ctx, err := libusb.Init()
