@@ -1,7 +1,6 @@
 {
   "scans_per_buffer": 1024,
   "total_buffers": 100,
-  "output_file": "output_data.dat",
   "analog_input": {
     "freq": 10000,
     "block_transfer": true,

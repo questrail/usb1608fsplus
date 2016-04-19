@@ -53,9 +53,6 @@ func main() {
 	}
 	defer daq.Close()
 
-	// Read the calibration memory to setup the gain table
-	// gainTable, _ := daq.BuildGainTable()
-
 	// Create new analog input and ensure the scan is stopped and buffer cleared
 	ai, err := daq.NewAnalogInput()
 	if err != nil {
