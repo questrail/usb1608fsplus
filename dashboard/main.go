@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -18,6 +19,7 @@ import (
 	"github.com/gizak/termui"
 	"github.com/gotmc/libusb"
 	"github.com/gotmc/mccdaq/usb1608fsplus"
+	"github.com/mitchellh/go-homedir"
 	rpi "github.com/nathan-osman/go-rpigpio"
 )
 
@@ -27,6 +29,16 @@ const (
 )
 
 func main() {
+
+	// Parse the config flags to determine the config JSON filename
+	var (
+		configFlag = flag.String("config", "./config.json", "JSON config filename.")
+	)
+	flag.Parse()
+	configFilename, err := homedir.Expand(*configFlag)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	// If running from RPi, set GPIO3 low.
 	if runtime.GOARCH == "arm" {
@@ -111,7 +123,7 @@ func main() {
 	**************************/
 
 	// Setup the analog input scan
-	configData, err := ioutil.ReadFile("./analog_config.json")
+	configData, err := ioutil.ReadFile(configFilename)
 	if err != nil {
 		log.Fatalf("Error reading the USB-1608FS-Plus JSON config file")
 	}
