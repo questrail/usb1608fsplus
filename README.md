@@ -13,9 +13,13 @@ $ go get github.com/questrail/usb1608fsplus
 
 ## Dependencies
 
-- [libusb \[C\]][libusb-c] — Library for USB device access
-- [libusb \[Go\]][libusb] — Go bindings for the [libusb C library][libusb-c]
+- [C libusb][libusb-c] — Library for USB device access
+  - OS X: `$ brew install libusb`
+  - Debian/Ubuntu: `$ sudo apt-get install -y libusb-1.0-0 libusb-1.0-0-dev`
+- [Go libusb][libusb] — Go bindings for the [libusb C library][libusb-c]
+  - `$ go get github.com/gotmc/libusb`
 - [mccdaq][] — Go-based driver for [MCC][] DAQs
+  - `$ go get github.com/gotmc/mccdaq`
 
 ## Documentation
 
