@@ -24,3 +24,6 @@ _testmain.go
 *.prof
 
 usb1608fsplus
+
+writedata/output_data/*.dat
+writedata/output_data/*.hdr
