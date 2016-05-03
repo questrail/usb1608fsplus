@@ -103,9 +103,27 @@ func main() {
 	outputDir := configJSON.OutputFile
 	ai.SetScanRanges()
 
+	var headerJSON = struct {
+		OutputFile     string    `json:"output_file"`
+		ScansPerBuffer int       `json:"scans_per_buffer"`
+		TotalBuffers   int       `json:"total_buffers"`
+		Buffer         int       `json:"buffer"`
+		Timestamp      time.Time `json:"timestamp"`
+	}{
+		"",
+		scansPerBuffer,
+		totalBuffers,
+		0,
+		time.Now(),
+	}
+
 	// Setup dir to hold output files.
-	os.Mkdir(outputDir, 0755)
+	err = os.MkdirAll(outputDir, 0755)
+	if err != nil {
+		log.Fatalf("Could not create output dir: %s", err)
+	}
 	baseFilename := path.Base(outputDir)
+	headerJSON.OutputFile = baseFilename
 
 	// Read the scan ranges
 	time.Sleep(millisecondDelay * time.Millisecond)
@@ -116,7 +134,8 @@ func main() {
 	totalBytesRead := 0
 
 	for j := 0; j < totalBuffers; j++ {
-		// time.Sleep(millisecondDelay * time.Millisecond)
+		headerJSON.Buffer = j
+		headerJSON.Timestamp = time.Now()
 		data, err := ai.ReadScan(scansPerBuffer)
 		totalBytesRead += len(data)
 		if err != nil {
@@ -127,9 +146,14 @@ func main() {
 			log.Fatalf("Error reading scan: %s", err)
 		}
 		// Write the data to the output
-		filename := fmt.Sprintf("%s_%d.dat", baseFilename, j)
-		path := path.Join(outputDir, filename)
-		go ioutil.WriteFile(path, data, 0666)
+		headerData, err := json.MarshalIndent(headerJSON, "", "  ")
+		headerFilename := fmt.Sprintf("%s_%d.hdr", baseFilename, j)
+		headerPath := path.Join(outputDir, headerFilename)
+		go ioutil.WriteFile(headerPath, headerData, 0666)
+		binaryFilename := fmt.Sprintf("%s_%d.dat", baseFilename, j)
+		binaryPath := path.Join(outputDir, binaryFilename)
+		log.Printf("Writing %s", binaryFilename)
+		go ioutil.WriteFile(binaryPath, data, 0666)
 	}
 
 	// Stop the analog scan and close the DAQ
