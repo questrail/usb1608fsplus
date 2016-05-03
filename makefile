@@ -14,7 +14,7 @@ check:
 	go vet ./...
 	go test ./...
 
-#  Generate the API docs to embed into the binaries
+#  Run `go generate`
 generate:
 	go generate
 
