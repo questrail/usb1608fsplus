@@ -32,7 +32,7 @@ func main() {
 
 	// Parse the config flags to determine the config JSON filename
 	var (
-		configFlag = flag.String("config", "./config.json", "JSON config filename.")
+		configFlag = flag.String("config", "./remote_config.json", "JSON config filename.")
 	)
 	flag.Parse()
 	configFilename, err := homedir.Expand(*configFlag)
@@ -104,17 +104,19 @@ func main() {
 	ai.SetScanRanges()
 
 	var headerJSON = struct {
-		OutputFile     string    `json:"output_file"`
-		ScansPerBuffer int       `json:"scans_per_buffer"`
-		TotalBuffers   int       `json:"total_buffers"`
-		Buffer         int       `json:"buffer"`
-		Timestamp      time.Time `json:"timestamp"`
+		OutputFile                string    `json:"output_file"`
+		ScansPerBuffer            int       `json:"scans_per_buffer"`
+		TotalBuffers              int       `json:"total_buffers"`
+		Buffer                    int       `json:"buffer"`
+		Timestamp                 time.Time `json:"timestamp"`
+		usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
 		"",
 		scansPerBuffer,
 		totalBuffers,
 		0,
 		time.Now(),
+		*ai,
 	}
 
 	// Setup dir to hold output files.
@@ -146,7 +148,7 @@ func main() {
 			log.Fatalf("Error reading scan: %s", err)
 		}
 		// Write the data to the output
-		headerData, err := json.MarshalIndent(headerJSON, "", "  ")
+		headerData, err := json.MarshalIndent(&headerJSON, "", "  ")
 		headerFilename := fmt.Sprintf("%s_%d.hdr", baseFilename, j)
 		headerPath := path.Join(outputDir, headerFilename)
 		go ioutil.WriteFile(headerPath, headerData, 0666)

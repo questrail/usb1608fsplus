@@ -1,5 +1,5 @@
 {
-  "daq_sn": "01ACD31D",
+  "daq_sn": "01AF3FB0",
   "output_file": "output_data",
   "scans_per_buffer": 1024,
   "total_buffers": 100,
@@ -8,8 +8,8 @@
     "block_transfer": true,
     "trigger": "none",
     "ext_pacer": false,
-    "output_sync": false,
-    "debug_mode": true,
+    "output_sync": true,
+    "debug_mode": false,
     "stall_overrun": true,
     "channels": [
       {"enabled": true, "range": "10V", "desc": "I1"},
