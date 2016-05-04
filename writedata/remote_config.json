@@ -1,6 +1,5 @@
 {
   "daq_sn": "01AF3FBA",
-  "disable_gpio3": true,
   "output_file": "remote_data",
   "scans_per_buffer": 1024,
   "total_buffers": 100,

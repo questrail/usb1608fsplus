@@ -49,29 +49,35 @@ func main() {
 		log.Fatalf("Error reading the USB-1608FS-Plus JSON config file")
 	}
 	dec := json.NewDecoder(bytes.NewReader(appConfigData))
-	var appConfig = struct {
+	type RPi struct {
+		GPIO   int    `json:"gpio"`
+		Output string `json:"output"`
+	}
+	type AppConfig struct {
 		SN           string `json:"daq_sn"`
 		DisableGPIO3 bool   `json:"disable_gpio3"`
 		OutputFile   string `json:"output_file"`
-	}{
-		"",
-		false,
-		"",
+		RPi          []RPi  `json:"rpi"`
 	}
+	var appConfig AppConfig
 	if err := dec.Decode(&appConfig); err != nil {
 		log.Fatalf("Couldn't parse app config: %v", err)
 	}
 	outputDir := appConfig.OutputFile
 
-	// If desired, pull GPIO3 low
-	if appConfig.DisableGPIO3 {
-		log.Printf("Pulling GPIO3 low.")
-		gpio3, err := rpi.OpenPin(3, rpi.OUT)
+	// Set RPi, GPIO outputs as desired.
+	var pins = make([]*rpi.Pin, len(appConfig.RPi))
+	for i, rpiGPIO := range appConfig.RPi {
+		pins[i], err = rpi.OpenPin(rpiGPIO.GPIO, rpi.OUT)
 		if err != nil {
 			panic(err)
 		}
-		defer gpio3.Close()
-		gpio3.Write(rpi.LOW)
+		defer pins[i].Close()
+		if rpiGPIO.Output == "low" {
+			pins[i].Write(rpi.LOW)
+		} else if rpiGPIO.Output == "high" {
+			pins[i].Write(rpi.HIGH)
+		}
 	}
 
 	/***********************************
