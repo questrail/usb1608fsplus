@@ -14,7 +14,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"runtime"
 	"time"
 
 	"github.com/gotmc/libusb"
@@ -30,6 +29,10 @@ const (
 
 func main() {
 
+	/****************************
+	* Configure the application *
+	****************************/
+
 	// Parse the config flags to determine the config JSON filename
 	var (
 		configFlag = flag.String("config", "./remote_config.json", "JSON config filename.")
@@ -40,8 +43,29 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	// If running from RPi, set GPIO3 low.
-	if runtime.GOARCH == "arm" {
+	// Setup the application config
+	appConfigData, err := ioutil.ReadFile(configFilename)
+	if err != nil {
+		log.Fatalf("Error reading the USB-1608FS-Plus JSON config file")
+	}
+	dec := json.NewDecoder(bytes.NewReader(appConfigData))
+	var appConfig = struct {
+		SN           string `json:"daq_sn"`
+		DisableGPIO3 bool   `json:"disable_gpio3"`
+		OutputFile   string `json:"output_file"`
+	}{
+		"",
+		false,
+		"",
+	}
+	if err := dec.Decode(&appConfig); err != nil {
+		log.Fatalf("Couldn't parse app config: %v", err)
+	}
+	outputDir := appConfig.OutputFile
+
+	// If desired, pull GPIO3 low
+	if appConfig.DisableGPIO3 {
+		log.Printf("Pulling GPIO3 low.")
 		gpio3, err := rpi.OpenPin(3, rpi.OUT)
 		if err != nil {
 			panic(err)
@@ -50,6 +74,10 @@ func main() {
 		gpio3.Write(rpi.LOW)
 	}
 
+	/***********************************
+	* Start talking to the MCC via USB *
+	***********************************/
+
 	// Initialize the USB Context
 	ctx, err := libusb.Init()
 	if err != nil {
@@ -57,11 +85,10 @@ func main() {
 	}
 	defer ctx.Exit()
 
-	// Find the first USB fevice with the VendorID and ProductID matching the MCC
-	// USB-1608FS-Plus DAQ
-	daq, err := usb1608fsplus.GetFirstDevice(ctx)
+	// Create the USB-1608FS-Plus DAQ device using the given S/N
+	daq, err := usb1608fsplus.NewViaSN(ctx, appConfig.SN)
 	if err != nil {
-		log.Fatalf("Couldn't find a USB-1608FS-Plus: %s", err)
+		log.Fatalf("Something bad getting S/N happened: %s", err)
 	}
 	defer daq.Close()
 
@@ -83,14 +110,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading the USB-1608FS-Plus JSON config file")
 	}
-	dec := json.NewDecoder(bytes.NewReader(configData))
+	dec = json.NewDecoder(bytes.NewReader(configData))
 	var configJSON = struct {
-		OutputFile                 string `json:"output_file"`
-		ScansPerBuffer             int    `json:"scans_per_buffer"`
-		TotalBuffers               int    `json:"total_buffers"`
+		ScansPerBuffer             int `json:"scans_per_buffer"`
+		TotalBuffers               int `json:"total_buffers"`
 		*usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
-		"",
 		0,
 		0,
 		ai,
@@ -100,7 +125,6 @@ func main() {
 	}
 	scansPerBuffer := configJSON.ScansPerBuffer
 	totalBuffers := configJSON.TotalBuffers
-	outputDir := configJSON.OutputFile
 	ai.SetScanRanges()
 
 	var headerJSON = struct {

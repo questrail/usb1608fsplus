@@ -1,6 +1,7 @@
 {
   "daq_sn": "01AF3FB0",
-  "output_file": "output_data",
+  "disable_gpio3": true,
+  "output_file": "master_output",
   "scans_per_buffer": 1024,
   "total_buffers": 100,
   "analog_input": {
