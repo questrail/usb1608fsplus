@@ -92,9 +92,9 @@ func main() {
 	defer ctx.Exit()
 
 	// Create the USB-1608FS-Plus DAQ device using the given S/N
-	daq, err := usb1608fsplus.NewViaSN(ctx, appConfig.SN)
+	daq, err := usb1608fsplus.GetFirstDevice(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't get S/N %s: %s", appConfig.SN, err)
+		log.Fatalf("Couldn't get first device: %s", appConfig.SN, err)
 	}
 	defer daq.Close()
 
