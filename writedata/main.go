@@ -119,9 +119,11 @@ func main() {
 	dec = json.NewDecoder(bytes.NewReader(configData))
 	var configJSON = struct {
 		ScansPerBuffer             int `json:"scans_per_buffer"`
-		TotalBuffers               int `json:"total_buffers"`
+		BuffersPerFile             int `json:"buffers_per_file"`
+		NumFiles                   int `json:"num_files"`
 		*usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
+		0,
 		0,
 		0,
 		ai,
@@ -130,20 +132,23 @@ func main() {
 		log.Fatalf("parse USB-1608FS-Plus: %v", err)
 	}
 	scansPerBuffer := configJSON.ScansPerBuffer
-	totalBuffers := configJSON.TotalBuffers
+	buffersPerFile := configJSON.BuffersPerFile
+	numFiles := configJSON.NumFiles
 	ai.SetScanRanges()
 
 	var headerJSON = struct {
 		OutputFile                string    `json:"output_file"`
 		ScansPerBuffer            int       `json:"scans_per_buffer"`
-		TotalBuffers              int       `json:"total_buffers"`
-		Buffer                    int       `json:"buffer"`
+		BuffersPerFile            int       `json:"buffers_per_file"`
+		NumFiles                  int       `json:"num_files"`
+		FileNum                   int       `json:"file_num"`
 		Timestamp                 time.Time `json:"timestamp"`
 		usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
 		"",
 		scansPerBuffer,
-		totalBuffers,
+		buffersPerFile,
+		numFiles,
 		0,
 		time.Now(),
 		*ai,
@@ -165,27 +170,38 @@ func main() {
 	ai.StartScan(0)
 	totalBytesRead := 0
 
-	for j := 0; j < totalBuffers; j++ {
-		headerJSON.Buffer = j
+	bytesPerWord := 2
+	expectedBytesPerFile := ai.NumEnabledChannels() * bytesPerWord * scansPerBuffer * buffersPerFile
+
+	for fileNum := 0; fileNum < numFiles; fileNum++ {
+		dataForFile := make([]byte, 0, expectedBytesPerFile)
+		headerJSON.FileNum = fileNum
 		headerJSON.Timestamp = time.Now()
-		data, err := ai.ReadScan(scansPerBuffer)
-		totalBytesRead += len(data)
-		if err != nil {
-			// Stop the analog scan and close the DAQ
-			ai.StopScan()
-			time.Sleep(millisecondDelay * time.Millisecond)
-			daq.Close()
-			log.Fatalf("Error reading scan: %s", err)
+		for bufferNum := 0; bufferNum < buffersPerFile; bufferNum++ {
+			data, err := ai.ReadScan(scansPerBuffer)
+			totalBytesRead += len(data)
+			if err != nil {
+				// Stop the analog scan and close the DAQ
+				ai.StopScan()
+				time.Sleep(millisecondDelay * time.Millisecond)
+				daq.Close()
+				log.Fatalf("Error reading scan: %s", err)
+			}
+			// Data is good so append
+			dataForFile = append(dataForFile, data...)
 		}
 		// Write the data to the output
 		headerData, err := json.MarshalIndent(&headerJSON, "", "  ")
-		headerFilename := fmt.Sprintf("%s_%d.hdr", baseFilename, j)
+		if err != nil {
+			headerData = []byte("Bad header")
+		}
+		headerFilename := fmt.Sprintf("%s_%d.hdr", baseFilename, fileNum)
 		headerPath := path.Join(outputDir, headerFilename)
 		go ioutil.WriteFile(headerPath, headerData, 0666)
-		binaryFilename := fmt.Sprintf("%s_%d.dat", baseFilename, j)
+		binaryFilename := fmt.Sprintf("%s_%d.dat", baseFilename, fileNum)
 		binaryPath := path.Join(outputDir, binaryFilename)
 		log.Printf("Writing %s", binaryFilename)
-		go ioutil.WriteFile(binaryPath, data, 0666)
+		go ioutil.WriteFile(binaryPath, dataForFile, 0666)
 	}
 
 	// Stop the analog scan and close the DAQ
