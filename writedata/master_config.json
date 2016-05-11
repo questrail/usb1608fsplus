@@ -5,7 +5,8 @@
   ],
   "output_file": "master_output",
   "scans_per_buffer": 1024,
-  "total_buffers": 100,
+  "buffers_per_file": 20,
+  "num_files": 5,
   "analog_input": {
     "freq": 10000,
     "block_transfer": true,
