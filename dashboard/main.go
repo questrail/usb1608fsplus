@@ -32,7 +32,7 @@ func main() {
 
 	// Parse the config flags to determine the config JSON filename
 	var (
-		configFlag = flag.String("config", "./config.json", "JSON config filename.")
+		configFlag = flag.String("config", "./dashboard_config.json", "JSON config filename.")
 	)
 	flag.Parse()
 	configFilename, err := homedir.Expand(*configFlag)
