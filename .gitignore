@@ -30,3 +30,4 @@ writedata/output_data/*.hdr
 writedata/test_output/
 writedata/writedata
 getsn/getsn
+dashboard/dashboard
