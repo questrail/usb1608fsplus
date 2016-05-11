@@ -29,3 +29,4 @@ writedata/output_data/*.dat
 writedata/output_data/*.hdr
 writedata/test_output/
 writedata/writedata
+getsn/getsn
