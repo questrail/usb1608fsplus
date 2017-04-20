@@ -181,7 +181,7 @@ func main() {
 	for fileNum := 0; fileNum < numFiles; fileNum++ {
 		dataForFile := make([]byte, 0, expectedBytesPerFile)
 		headerJSON.FileNum = fileNum
-		getRTCTime(c)
+		go getRTCTime(c)
 		headerJSON.SystemTime = time.Now()
 		for bufferNum := 0; bufferNum < buffersPerFile; bufferNum++ {
 			data, err := ai.ReadScan(scansPerBuffer)
