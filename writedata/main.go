@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 
@@ -94,7 +95,7 @@ func main() {
 	// Create the USB-1608FS-Plus DAQ device using the given S/N
 	daq, err := usb1608fsplus.GetFirstDevice(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't get first device: %s", appConfig.SN, err)
+		log.Fatalf("Couldn't get first device %s: %s", appConfig.SN, err)
 	}
 	defer daq.Close()
 
@@ -142,7 +143,8 @@ func main() {
 		BuffersPerFile            int       `json:"buffers_per_file"`
 		NumFiles                  int       `json:"num_files"`
 		FileNum                   int       `json:"file_num"`
-		Timestamp                 time.Time `json:"timestamp"`
+		SystemTime                time.Time `json:"system_time"`
+		RTCTime                   string    `json:"rtc_time"`
 		usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
 		"",
@@ -151,6 +153,7 @@ func main() {
 		numFiles,
 		0,
 		time.Now(),
+		"",
 		*ai,
 	}
 
@@ -176,7 +179,8 @@ func main() {
 	for fileNum := 0; fileNum < numFiles; fileNum++ {
 		dataForFile := make([]byte, 0, expectedBytesPerFile)
 		headerJSON.FileNum = fileNum
-		headerJSON.Timestamp = time.Now()
+		headerJSON.RTCTime = getRTCTime()
+		headerJSON.SystemTime = time.Now()
 		for bufferNum := 0; bufferNum < buffersPerFile; bufferNum++ {
 			data, err := ai.ReadScan(scansPerBuffer)
 			totalBytesRead += len(data)
@@ -208,4 +212,13 @@ func main() {
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
+}
+
+func getRTCTime() string {
+	var cmdOut []byte
+	var err error
+	if cmdOut, err = exec.Command("hwclock", "-r").Output(); err != nil {
+		return "Bad hwclock -r"
+	}
+	return string(cmdOut)
 }
