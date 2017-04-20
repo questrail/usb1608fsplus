@@ -176,10 +176,12 @@ func main() {
 	bytesPerWord := 2
 	expectedBytesPerFile := ai.NumEnabledChannels() * bytesPerWord * scansPerBuffer * buffersPerFile
 
+	c := make(chan string)
+
 	for fileNum := 0; fileNum < numFiles; fileNum++ {
 		dataForFile := make([]byte, 0, expectedBytesPerFile)
 		headerJSON.FileNum = fileNum
-		headerJSON.RTCTime = getRTCTime()
+		getRTCTime(c)
 		headerJSON.SystemTime = time.Now()
 		for bufferNum := 0; bufferNum < buffersPerFile; bufferNum++ {
 			data, err := ai.ReadScan(scansPerBuffer)
@@ -208,17 +210,19 @@ func main() {
 		go ioutil.WriteFile(binaryPath, dataForFile, 0666)
 	}
 
+	headerJSON.RTCTime = <-c
+
 	// Stop the analog scan and close the DAQ
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
 }
 
-func getRTCTime() string {
+func getRTCTime(c chan string) {
 	var cmdOut []byte
 	var err error
 	if cmdOut, err = exec.Command("hwclock", "-r").Output(); err != nil {
-		return "Bad hwclock -r"
+		c <- "Bad hwclock -r"
 	}
-	return string(cmdOut)
+	c <- string(cmdOut)
 }
