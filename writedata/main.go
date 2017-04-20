@@ -196,6 +196,7 @@ func main() {
 			// Data is good so append
 			dataForFile = append(dataForFile, data...)
 		}
+		headerJSON.RTCTime = <-c
 		// Write the data to the output
 		headerData, err := json.MarshalIndent(&headerJSON, "", "  ")
 		if err != nil {
@@ -210,8 +211,6 @@ func main() {
 		go ioutil.WriteFile(binaryPath, dataForFile, 0666)
 	}
 
-	headerJSON.RTCTime = <-c
-
 	// Stop the analog scan and close the DAQ
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
@@ -222,7 +221,7 @@ func getRTCTime(c chan string) {
 	var cmdOut []byte
 	var err error
 	if cmdOut, err = exec.Command("hwclock", "-r").Output(); err != nil {
-		c <- "Bad hwclock -r"
+		c <- "bad hwclock call"
 	}
 	c <- string(cmdOut)
 }
