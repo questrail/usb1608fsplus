@@ -17,7 +17,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/gotmc/libusb"
 	"github.com/gotmc/mccdaq/usb1608fsplus"
 	"github.com/mitchellh/go-homedir"
 	rpi "github.com/nathan-osman/go-rpigpio"
@@ -86,7 +85,7 @@ func main() {
 	***********************************/
 
 	// Initialize the USB Context
-	ctx, err := libusb.Init()
+	ctx, err := usb1608fsplus.Init()
 	if err != nil {
 		log.Fatal("Couldn't create USB context. Ending now.")
 	}
