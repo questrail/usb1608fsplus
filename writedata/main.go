@@ -13,10 +13,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"time"
 
-	"github.com/gotmc/libusb"
 	"github.com/gotmc/mccdaq/usb1608fsplus"
 	"github.com/mitchellh/go-homedir"
 	rpi "github.com/nathan-osman/go-rpigpio"
@@ -85,7 +85,7 @@ func main() {
 	***********************************/
 
 	// Initialize the USB Context
-	ctx, err := libusb.Init()
+	ctx, err := usb1608fsplus.Init()
 	if err != nil {
 		log.Fatal("Couldn't create USB context. Ending now.")
 	}
@@ -94,7 +94,7 @@ func main() {
 	// Create the USB-1608FS-Plus DAQ device using the given S/N
 	daq, err := usb1608fsplus.GetFirstDevice(ctx)
 	if err != nil {
-		log.Fatalf("Couldn't get first device: %s", appConfig.SN, err)
+		log.Fatalf("Couldn't get first device %s: %s", appConfig.SN, err)
 	}
 	defer daq.Close()
 
@@ -142,7 +142,8 @@ func main() {
 		BuffersPerFile            int       `json:"buffers_per_file"`
 		NumFiles                  int       `json:"num_files"`
 		FileNum                   int       `json:"file_num"`
-		Timestamp                 time.Time `json:"timestamp"`
+		SystemTime                time.Time `json:"system_time"`
+		RTCTime                   string    `json:"rtc_time"`
 		usb1608fsplus.AnalogInput `json:"analog_input"`
 	}{
 		"",
@@ -151,6 +152,7 @@ func main() {
 		numFiles,
 		0,
 		time.Now(),
+		"",
 		*ai,
 	}
 
@@ -173,10 +175,13 @@ func main() {
 	bytesPerWord := 2
 	expectedBytesPerFile := ai.NumEnabledChannels() * bytesPerWord * scansPerBuffer * buffersPerFile
 
+	c := make(chan string)
+
 	for fileNum := 0; fileNum < numFiles; fileNum++ {
 		dataForFile := make([]byte, 0, expectedBytesPerFile)
 		headerJSON.FileNum = fileNum
-		headerJSON.Timestamp = time.Now()
+		go getRTCTime(c)
+		headerJSON.SystemTime = time.Now()
 		for bufferNum := 0; bufferNum < buffersPerFile; bufferNum++ {
 			data, err := ai.ReadScan(scansPerBuffer)
 			totalBytesRead += len(data)
@@ -190,6 +195,7 @@ func main() {
 			// Data is good so append
 			dataForFile = append(dataForFile, data...)
 		}
+		headerJSON.RTCTime = <-c
 		// Write the data to the output
 		headerData, err := json.MarshalIndent(&headerJSON, "", "  ")
 		if err != nil {
@@ -208,4 +214,13 @@ func main() {
 	time.Sleep(millisecondDelay * time.Millisecond)
 	ai.StopScan()
 	time.Sleep(millisecondDelay * time.Millisecond)
+}
+
+func getRTCTime(c chan string) {
+	var cmdOut []byte
+	var err error
+	if cmdOut, err = exec.Command("hwclock", "-r").Output(); err != nil {
+		c <- "bad hwclock call"
+	}
+	c <- string(cmdOut)
 }
